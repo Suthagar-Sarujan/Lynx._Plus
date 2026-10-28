@@ -1,0 +1,165 @@
+// LYNX._NEWS — Prisma schema (MySQL)
+//
+// A `Story` is the language-agnostic source (one per event). Each `Post` is a
+// language + platform-ready version of that story (English, Sinhala, Tamil,
+// ...), carrying its own caption/hashtags/status/schedule so each language
+// can be reviewed and published independently.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Category {
+  SRI_LANKA
+  INDIA
+  FOREIGN
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+enum PostMode {
+  TEMPLATE
+  DIRECT_IMAGE
+}
+
+enum Platform {
+  FACEBOOK
+  INSTAGRAM
+}
+
+model Story {
+  id         String   @id @default(cuid())
+  category   Category
+  sourceUrl  String?  @unique @db.VarChar(500) // set for stories imported from an RSS feed; dedupes re-imports
+  sourceName String?  @db.VarChar(80)          // feed name ("Ada Derana"), used for attribution in captions
+  autoQueuedAt DateTime?                       // set once the autopilot has claimed this story; it is never picked twice
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  posts Post[]
+
+  @@index([category])
+  @@index([autoQueuedAt])
+}
+
+model Post {
+  id          String     @id @default(cuid())
+  storyId     String
+  story       Story      @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  language    String     @default("en") // BCP-47-ish tag: en, si, ta, hi, ...
+  mode        PostMode   @default(TEMPLATE)
+  status      PostStatus @default(DRAFT)
+
+  // Template fields (ignored when mode = DIRECT_IMAGE)
+  dateLabel   String?    // e.g. "October 18"
+  yearLabel   String?    // e.g. "2026"
+  badgeWord   String?    @default("NEWS")
+  showBreaking Boolean   @default(false) // mark as breaking: image says "BREAKING NEWS" instead of "NEWS"
+  showNews     Boolean   @default(true)  // draw the gold "NEWS" box on the image
+  bodyText    String?    @db.Text
+  creditTag   String?    @default(": LYNX._CINE")
+
+  // Typesetting of bodyText on the image; null = template default
+  bodyFont       String? @db.VarChar(40)  // poppins | opensans | inter | oswald | playfair | lora
+  bodyFontSize   Int?                     // px on the 1500x2000 image; null = auto-fit
+  bodyAlign      String? @db.VarChar(10)  // left | center | right
+  bodyLineHeight Int?                     // percent of font size
+
+  // Direct-image fields
+  directTitle String?
+
+  photoUrl    String?    @db.Text // stored asset path / URL for the source photo
+  renderedImageUrl String? @db.Text // generated composite PNG (template mode)
+
+  caption     String?    @db.Text
+  hashtags    String?    @db.Text
+
+  scheduledAt DateTime?
+  publishedAt DateTime?
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  publishJobs PublishJob[]
+
+  @@index([storyId])
+  @@index([status])
+  @@index([language])
+}
+
+model PublishJob {
+  id          String     @id @default(cuid())
+  postId      String
+  post        Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  platform    Platform
+  status      PostStatus @default(SCHEDULED)
+  runAt       DateTime
+  attempts    Int        @default(0)
+  lastError   String?    @db.Text
+
+  platformPostId String? // the id Facebook/Instagram returns once published
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // One job per post+platform: this is what makes publishing idempotent (a retry never double-posts).
+  @@unique([postId, platform])
+  @@index([postId])
+  @@index([status, runAt])
+}
+
+// Append-only record of who did what in the dashboard (read-only in the UI).
+model AuditLog {
+  id         String   @id @default(cuid())
+  at         DateTime @default(now())
+  actor      String   @db.VarChar(100)        // signed-in username, or the name that tried to sign in
+  action     String   @db.VarChar(40)         // e.g. post.update, auth.login
+  entityType String?  @db.VarChar(20)         // "post" | "feed"
+  entityId   String?  @db.VarChar(40)
+  summary    String   @db.VarChar(300)
+  detail     String?  @db.Text                // JSON: changed fields, platforms, counts
+  ip         String?  @db.VarChar(64)
+
+  @@index([at])
+  @@index([entityType, entityId])
+}
+
+// Single-row settings for the autopilot (id is always "default"). `enabled` is the kill switch.
+model AutomationSettings {
+  id              String   @id @default("default")
+  enabled         Boolean  @default(false)
+  platforms       String   @default("FACEBOOK,INSTAGRAM") @db.VarChar(40)
+  languages       String   @default("en") @db.VarChar(80)    // comma list; "en" alone = no translation
+  dailyCap        Int      @default(12)                      // max stories per rolling 24h
+  minGapMinutes   Int      @default(30)                      // min time between two stories
+  languageStaggerMinutes Int @default(15)                    // gap between language versions of one story
+  activeFromHour  Int      @default(7)                       // local hour, inclusive
+  activeToHour    Int      @default(23)                      // local hour, exclusive
+  timezone        String   @default("Asia/Colombo") @db.VarChar(60)
+  maxAgeHours     Int      @default(12)                      // older drafts are considered stale and left alone
+  minPhotoWidth   Int      @default(0)                       // source photo must have this many pixels across the template photo box (0 = accept any)
+  blockedKeywords String   @default("suicide,rape,sexual assault,child abuse") @db.VarChar(1000)
+  // Stories containing any of these words are never auto-posted; they stay drafts for a person to review.
+  reviewKeywords  String   @default("election,elections,rally,protest,protests,minister,parliament,riot,riots,communal,religious,court,arrest,arrested,murder,killed,attack,war,pardon,president,cabinet,police") @db.VarChar(1000)
+  updatedAt       DateTime @updatedAt
+}
+
+// The Page access token currently in use (single row, id "default"). Overrides META_PAGE_ACCESS_TOKEN
+// in .env, so a renewed token takes effect without editing files or restarting anything.
+model MetaCredential {
+  id        String   @id @default("default")
+  pageToken String   @db.Text
+  updatedAt DateTime @updatedAt
+}

@@ -1,0 +1,10 @@
+# Caddy gets and renews a free HTTPS certificate for DOMAIN by itself.
+# Meta fetches post images from this address, so it must be public https.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:3000
+
+	# Post images are immutable files with random names.
+	@images path /generated/* /uploads/*
+	header @images Cache-Control "public, max-age=86400"
+}

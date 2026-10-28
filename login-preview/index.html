@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · LYNX._PLUS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="background.jpg">
+<style>
+  /* Dark theme (default). Switch with <body data-theme="light">. */
+  :root {
+    --gold: #e0b04a;
+    --gold-deep: #c9962b;
+    --btn-ink: #2b1400;
+    --card-bg: rgba(20, 9, 11, 0.94);
+    --card-border: rgba(255, 255, 255, 0.10);
+    --text: #ffffff;
+    --muted: #cdbd9f;          /* muted tan */
+    --field-bg: #0d0709;
+    --field-text: #f6ecd6;
+    --field-border: rgba(255, 255, 255, 0.22);
+    --placeholder: #a99d8c;
+    --link: #e0b04a;
+    --error: #ff8f85;
+    --disabled-bg: #3a2c2a;
+    --s1: 8px; --s2: 16px; --s3: 24px; --s4: 32px;
+    --field-h: 62px;
+    --btn-h: 66px;
+  }
+  body[data-theme="light"] {
+    --card-bg: #ffffff;
+    --card-border: #e6d9bd;
+    --text: #2b1a12;
+    --muted: #5a4632;
+    --field-bg: #faf4e6;
+    --field-text: #2b1a12;
+    --field-border: #b8975f;
+    --placeholder: #7a6a58;
+    --link: #8a5a00;
+    --error: #b91c1c;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: var(--s3) var(--s2);
+    font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color: var(--text);
+    background-color: #1a0505;
+    background-image:
+      linear-gradient(to bottom, rgba(20, 0, 0, 0.35), rgba(0, 0, 0, 0.65)),
+      url("background.jpg"),
+      radial-gradient(ellipse at 50% 20%, #5a0f12 0%, #2a0709 55%, #1a0505 100%);
+    background-position: center, center top, center;
+    background-size: cover, cover, cover;
+    background-repeat: no-repeat;
+  }
+
+  .card {
+    width: 100%; max-width: 520px;
+    padding: 44px 48px;
+    background: var(--card-bg);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    border: 1px solid var(--card-border);
+    border-radius: 28px;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6), 0 8px 28px rgba(0, 0, 0, 0.4);
+  }
+
+  /* ---------- Header ---------- */
+  .brand { text-align: center; }
+  .logo {
+    width: 76px; height: 76px; margin: 0 auto var(--s2);
+    border-radius: 50%; overflow: hidden;
+    box-shadow: 0 0 0 2px var(--gold), 0 0 28px rgba(224, 176, 74, 0.35);
+  }
+  .logo img, .logo svg { width: 100%; height: 100%; display: block; object-fit: cover; }
+  .wordmark { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: 0.12em; color: var(--gold); }
+  body[data-theme="light"] .wordmark { color: var(--link); }
+  .divider {
+    height: 1px; margin: var(--s2) auto; border: 0; width: 100%;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  .tagline { margin: 0 0 var(--s4); font-size: 14px; color: var(--muted); text-align: center; }
+
+  /* ---------- Content ---------- */
+  h1 { margin: 0 0 var(--s1); font-size: 30px; font-weight: 700; line-height: 1.2; }
+  .lead { margin: 0 0 var(--s4); font-size: 14px; color: var(--muted); }
+
+  .field { margin-bottom: var(--s3); }
+  label {
+    display: block; margin-bottom: var(--s1);
+    font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+  }
+  .input-wrap { position: relative; width: 100%; }
+  input {
+    display: block; width: 100%; height: var(--field-h);
+    padding: 0 var(--s2);
+    font: inherit; font-size: 16px; color: var(--field-text);
+    background: var(--field-bg);
+    border: 1px solid var(--field-border);
+    border-radius: 14px; outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input::placeholder { color: var(--placeholder); }
+  input:hover { border-color: var(--gold); }
+  input:focus { border-color: var(--gold); box-shadow: 0 0 0 4px rgba(224, 176, 74, 0.22); }
+  input[aria-invalid="true"] { border-color: var(--error); box-shadow: none; }
+  input[aria-invalid="true"]:focus { box-shadow: 0 0 0 4px rgba(255, 143, 133, 0.2); }
+  #password { padding-right: 60px; }
+
+  .field-error { min-height: 0; margin: var(--s1) 0 0; font-size: 13px; color: var(--error); }
+  .field-error:empty { display: none; }
+
+  .toggle {
+    position: absolute; top: calc(var(--field-h) / 2); right: 8px; transform: translateY(-50%);
+    width: 44px; height: 44px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent; border: 0; border-radius: 10px;
+    color: var(--muted); cursor: pointer;
+  }
+  .toggle:hover { color: var(--gold); background: rgba(128, 128, 128, 0.14); }
+  .toggle:focus-visible { outline: 2px solid var(--gold); }
+  .toggle svg { width: 22px; height: 22px; }
+  .toggle .eye-off { display: none; }
+  .toggle[aria-pressed="true"] .eye-on { display: none; }
+  .toggle[aria-pressed="true"] .eye-off { display: block; }
+  .input-wrap { height: var(--field-h); }
+
+  .forgot { display: flex; justify-content: flex-end; margin-top: var(--s1); }
+  a { color: var(--link); text-decoration: none; font-weight: 500; }
+  a:hover { text-decoration: underline; }
+  a:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 4px; }
+  .forgot a { font-size: 14px; }
+
+  /* Reserved height so a failed login never shifts the layout. */
+  .form-error { min-height: 24px; margin: 0 0 var(--s2); font-size: 14px; line-height: 24px; text-align: center; color: var(--error); }
+
+  .btn {
+    position: relative; width: 100%; height: var(--btn-h);
+    display: flex; align-items: center; justify-content: center; gap: var(--s1);
+    font: inherit; font-size: 17px; font-weight: 700; color: var(--btn-ink);
+    background: linear-gradient(90deg, var(--gold-deep), var(--gold));
+    border: 0; border-radius: 14px; cursor: pointer;
+    box-shadow: 0 10px 28px rgba(201, 150, 43, 0.3);
+    transition: filter .15s, transform .05s, box-shadow .15s;
+  }
+  .btn svg { width: 20px; height: 20px; flex: none; }
+  .btn:hover:not(:disabled) { filter: brightness(1.08); box-shadow: 0 12px 32px rgba(224, 176, 74, 0.4); }
+  .btn:active:not(:disabled) { transform: translateY(1px); filter: brightness(0.95); box-shadow: none; }
+  .btn:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
+  .btn:disabled { cursor: progress; }
+  .btn .spinner { display: none; width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid rgba(43, 20, 0, 0.3); border-top-color: var(--btn-ink); animation: spin .7s linear infinite; }
+  .btn.loading .icon { display: none; }
+  .btn.loading .spinner { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .signup { margin: var(--s3) 0 0; text-align: center; font-size: 14px; color: var(--muted); }
+  .signup a { font-weight: 700; }
+
+  /* ---------- Small screens ---------- */
+  @media (max-width: 599px) {
+    :root { --field-h: 56px; --btn-h: 58px; }
+    .card { padding: 32px 24px; }
+    h1 { font-size: 26px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+    .btn .spinner { animation-duration: 1.6s; }
+  }
+</style>
+</head>
+<body>
+  <main class="card">
+    <header class="brand">
+      <div class="logo" id="logo">
+        <!-- Uses logo.png; if the file is missing, onerror swaps in the built-in SVG globe below. -->
+        <img src="logo.png" alt="LYNX._PLUS" id="logo-img">
+      </div>
+      <p class="wordmark">LYNX._PLUS</p>
+      <hr class="divider">
+      <p class="tagline">News &amp; Social Media, Simplified.</p>
+    </header>
+
+    <h1>Sign in</h1>
+    <p class="lead">Sign in to manage your news and social media accounts.</p>
+
+    <form id="login-form" novalidate>
+      <div class="field">
+        <label for="username">Username</label>
+        <div class="input-wrap">
+          <input id="username" name="username" type="text" autocomplete="username" placeholder="Enter your username" aria-describedby="username-error" autofocus>
+        </div>
+        <p class="field-error" id="username-error" aria-live="polite"></p>
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="input-wrap">
+          <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" aria-describedby="password-error">
+          <button type="button" class="toggle" id="toggle" aria-label="Show password" aria-pressed="false">
+            <svg class="eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+            <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/>
+            </svg>
+          </button>
+        </div>
+        <p class="field-error" id="password-error" aria-live="polite"></p>
+        <div class="forgot"><a href="#">Forgot password?</a></div>
+      </div>
+
+      <p class="form-error" id="form-error" role="alert" aria-live="polite"></p>
+
+      <button type="submit" class="btn" id="submit">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/>
+        </svg>
+        <span class="spinner" aria-hidden="true"></span>
+        <span id="submit-label">Sign in</span>
+      </button>
+    </form>
+
+    <p class="signup">Don't have an account? <a href="#">Create one</a></p>
+  </main>
+
+<script>
+  // ---- Logo fallback: built-in SVG globe if logo.png is missing ----
+  const FALLBACK_LOGO = `
+    <svg viewBox="0 0 72 72" role="img" aria-label="LYNX._PLUS logo">
+      <defs><radialGradient id="g" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#8a1a1e"/><stop offset="1" stop-color="#2a0709"/></radialGradient></defs>
+      <rect width="72" height="72" fill="url(#g)"/>
+      <g fill="none" stroke="#e0b04a" stroke-width="1.6">
+        <circle cx="36" cy="36" r="22"/><ellipse cx="36" cy="36" rx="9" ry="22"/><path d="M14 36h44M17 24h38M17 48h38"/>
+      </g>
+    </svg>`;
+  const logoImg = document.getElementById('logo-img');
+  logoImg.addEventListener('error', () => { document.getElementById('logo').innerHTML = FALLBACK_LOGO; });
+
+  // ---- Form logic ----
+  const form = document.getElementById('login-form');
+  const submit = document.getElementById('submit');
+  const submitLabel = document.getElementById('submit-label');
+  const formError = document.getElementById('form-error');
+  const toggle = document.getElementById('toggle');
+
+  const fields = [
+    { input: document.getElementById('username'), error: document.getElementById('username-error'), message: 'Please enter your username.' },
+    { input: document.getElementById('password'), error: document.getElementById('password-error'), message: 'Please enter your password.' }
+  ];
+
+  function validate(f) {
+    const ok = f.input.value.trim() !== '';
+    f.input.setAttribute('aria-invalid', String(!ok));
+    f.error.textContent = ok ? '' : f.message;
+    return ok;
+  }
+  function clear(f) {
+    f.input.setAttribute('aria-invalid', 'false');
+    f.error.textContent = '';
+  }
+
+  fields.forEach((f) => {
+    f.input.addEventListener('blur', () => validate(f));          // validate on blur
+    f.input.addEventListener('input', () => { clear(f); formError.textContent = ''; }); // clear while typing
+  });
+
+  // Show / hide password
+  toggle.addEventListener('click', () => {
+    const pw = fields[1].input;
+    const show = pw.type === 'password';
+    pw.type = show ? 'text' : 'password';
+    toggle.setAttribute('aria-pressed', String(show));
+    toggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    pw.focus();
+  });
+
+  function setLoading(on) {
+    submit.disabled = on;
+    submit.classList.toggle('loading', on);
+    submit.setAttribute('aria-busy', String(on));
+    submitLabel.textContent = on ? 'Signing in…' : 'Sign in';
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    formError.textContent = '';
+
+    const results = fields.map(validate);                         // validate on submit
+    const firstBad = fields[results.indexOf(false)];
+    if (firstBad) { firstBad.input.focus(); return; }
+
+    setLoading(true);
+    try {
+      // TODO: replace this simulated request with the real login call, e.g.
+      //   const res = await fetch('/api/auth/login', {
+      //     method: 'POST',
+      //     headers: { 'Content-Type': 'application/json' },
+      //     body: JSON.stringify({ username: fields[0].input.value, password: fields[1].input.value })
+      //   });
+      //   if (!res.ok) throw new Error((await res.json()).error || 'Sign-in failed.');
+      //   window.location.replace('/');
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      throw new Error('Incorrect username or password. Please try again.');
+    } catch (err) {
+      formError.textContent = err.message;
+    } finally {
+      setLoading(false);
+    }
+  });
+</script>
+</body>
+</html>

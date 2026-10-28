@@ -1,0 +1,113 @@
+# Production stack: HTTPS proxy (Caddy) + web app + worker + MySQL + Redis + daily backups.
+#
+#   cp .env.production.example .env.production   # fill in the values
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+#
+# Only Caddy is reachable from the internet (ports 80/443); the database and Redis stay private.
+
+x-app: &app
+  build: .
+  restart: unless-stopped
+  env_file: .env.production
+  environment: &app-env
+    # Inside Docker the services are reached by name, not localhost.
+    DATABASE_URL: mysql://lynx:${MYSQL_PASSWORD}@mysql:3306/lynx_news
+    REDIS_URL: redis://redis:6379
+    PUBLIC_BASE_URL: https://${DOMAIN}
+    NODE_ENV: production
+  volumes:
+    - uploads:/app/public/uploads
+    - generated:/app/public/generated
+  depends_on:
+    mysql:
+      condition: service_healthy
+    redis:
+      condition: service_started
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web]
+
+  web:
+    <<: *app
+    # Creates/updates the database tables on every start, then serves the app.
+    command: sh -c "npx prisma migrate deploy && npm run start"
+    expose:
+      - "3000"
+
+  worker:
+    <<: *app
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    depends_on:
+      web:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: lynx_news
+      MYSQL_USER: lynx
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
+  # Dumps the database every night at 03:00 server time into ./backups and keeps the last 7 days.
+  backup:
+    image: mysql:8.4
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      MYSQL_PWD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          now=$$(date +%s); next=$$(date -d "03:00" +%s 2>/dev/null || echo $$((now + 86400)))
+          [ "$$next" -le "$$now" ] && next=$$((next + 86400))
+          sleep $$((next - now))
+          mysqldump -h mysql -uroot --single-transaction --routines lynx_news | gzip > /backups/lynx_news-$$(date +%F).sql.gz
+          find /backups -name 'lynx_news-*.sql.gz' -mtime +7 -delete
+        done
+
+volumes:
+  mysql_data:
+  redis_data:
+  uploads:
+  generated:
+  caddy_data:
+  caddy_config:
